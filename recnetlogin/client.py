@@ -28,19 +28,25 @@ class RecNetLogin:
         self.is_local: bool = False
 
         # Get identity cookie
-        if "RN_COOKIE" in env:
-            cookie = env["RN_COOKIE"]
+        key = "RN_SESSION_TOKEN"
+        if key in env:
+            cookie = env[key]
             self.is_local = True
         else:
             # If no local .env.secret file, look for globals
-            if "RN_COOKIE" in os.environ:
-                cookie = os.getenv("RN_COOKIE")
+            if key in os.environ:
+                cookie = os.getenv(key)
             else:
                 raise CookieMissing
 
         # Initialize attributes
-        self.__cookie: dict = {".AspNetCore.Identity.Application": cookie}
-        self.client: httpx.Client = httpx.Client(cookies=self.__cookie)
+        self.client: httpx.Client = httpx.Client()
+
+        # Get CSRF token
+        self.client.cookies["__Host-next-auth.csrf-token"] = self.get_csrf_token()
+        
+        # Include session token
+        self.client.cookies["__Secure-next-auth.session-token"] = cookie
 
         # Fetch tokens
         self.__token: str = ""
@@ -53,6 +59,11 @@ class RecNetLogin:
         self.client.headers = {
             "Authorization": f"Bearer {self.__token}" 
         }
+
+    def get_csrf_token(self) -> str:
+        resp = self.client.get("https://rec.net/api/auth/csrf")
+        data = resp.json()
+        return data["csrfToken"]
 
     def get_decoded_token(self) -> Optional[dict]:
         """Returns a decoded bearer token
@@ -81,14 +92,14 @@ class RecNetLogin:
             # Less than 15 minutes, renew the token
 
             # Get with cookie
-            auth_url = "https://auth.rec.net/connect/authorize?client_id=recnet&redirect_uri=https%3A%2F%2Frec.net%2Fauthenticate%2Fsilent&response_type=id_token%20token&scope=openid%20rn.api%20rn.notify%20rn.match.read%20rn.chat%20rn.accounts%20rn.auth%20rn.link%20rn.clubs%20rn.rooms&state=3b0bbf22ce1c40e7966dc6dd0f2df854&nonce=1ec7e44b909c416bbffae6b5e00ccb38&prompt=none"
-            r = self.client.get(auth_url, follow_redirects=True)
+            auth_url = "https://rec.net/api/auth/session"
+            resp = self.client.get(auth_url)
 
-            # Acquire token from url
-            parsed_url = urlparse(str(r.url))
+            # Get response
+            data = resp.json()
 
             try:
-                self.__token = parse_qs(parsed_url.fragment)['access_token'][0]  # Acquire the bearer token from the URL
+                self.__token = data["accessToken"]
             except KeyError:
                 # The cookie has expired or is invalid
                 raise InvalidLocalCookie if self.is_local else InvalidSystemCookie
