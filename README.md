@@ -1,10 +1,7 @@
-# RecNet-Login
-This is a Python package that allows you to acquire your [RecNet](https://rec.net/) bearer token and more with your cookie! 🍪
-
-This is a rewritten version. Previous versions do not work anymore.
+![rnl](https://github.com/Jegarde/RecNet-Login/assets/13438202/5d25fa39-6d8f-4717-82c8-619574036817)
+This is a Python package that allows you to acquire your [RecNet](https://rec.net/) access token and more with your cookie! 🍪
 
 # Features
-- No more account credentials!
 - Automatically renewing token
 - Supports 2FA accounts
 - Decoding the bearer token
