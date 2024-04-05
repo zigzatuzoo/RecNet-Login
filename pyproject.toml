@@ -8,7 +8,7 @@ version = "0.1.0"
 authors = [
     { name="Jegarde"}
 ]
-description = "RecNetLogin is a Python package that allows you to acquire your RecNet bearer token and more!"
+description = "RecNetLogin is a Python library that allows you to acquire your RecNet access token and more!"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -18,7 +18,8 @@ classifiers = [
 ]
 dependencies = [
     "PyJWT==2.7.0",
-    "httpx==0.24.1"
+    "httpx==0.24.1",
+    "python-dotenv==1.0.0"
 ]
 
 [project.urls]
