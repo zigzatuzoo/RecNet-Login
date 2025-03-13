@@ -56,6 +56,39 @@ pip installation once this is stable.
 rnl = RecNetLogin(env_path=".env.secret")  # Env path defaults to local directory
 ```
 
+### New Auth Workaround
+A month ago (as of 03/13/25) Rec Room added DDoS protection to their auth endpoints causing issues for this library.
+To get around it we can use FlareSolverr which is a proxy that gets around cloudflare DDoS protection.
+
+## FlareSolverr Setup
+
+### Option 1/2 Host one with Docker
+If you already know about docker then please skip to the for Docker X section
+If you don't already have docker, install it by using the following:
+for windows: https://docs.docker.com/desktop/setup/install/windows-install/
+for mac: https://docs.docker.com/desktop/setup/install/mac-install/
+for linux: https://docs.docker.com/engine/install/ubuntu/
+
+#### For Docker Engine (Linux)
+1. Copy/download the file flaresolverr.docker-compose.yml from the repo
+2. Move into the directory that contains the docker-compose file and run:
+`docker compose -f <Insert filename> up -d`
+
+#### For Docker Desktop (Windows/Mac)
+Use this stack overflow answer ... never touched Docker Desktop
+https://stackoverflow.com/a/66071384
+
+### Option 2/2 Using Someone Elses
+For the time being I'll host a public Flaresolverr instance with a pretty hard rate limit on one of my vps's. It should be enough to do a couple logins per minute but this should only be used for testing with an alt account.
+##### PLEASE DON'T TRUST RANDOM PUBLIC PROXIES WITH YOUR AUTH TOKENS
+
+Now that being said ... the instance will be hosted at `https://flaresolverr.apps.zigzatuzoo.xyz` so your .env file will look like this `FLARESOLVERR_INSTANCE="https://flaresolverr.apps.zigzatuzoo.xyz/v1"`
+
+#### Inserting Your Instance
+3. Same way as setting up your `RN_SESSION_TOKEN`
+If you are using a .env file then write in it `FLARESOLVERR_INSTANCE="http://<InsertInstanceDomain&Port>/v1"`
+So if you are running the FlareSolverr instance on the same system then it will look like this `FLARESOLVERR_INSTANCE="http://localhost:8191/v1"`
+
 # Usage
 
 ### Getting your token

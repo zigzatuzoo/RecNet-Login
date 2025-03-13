@@ -5,6 +5,7 @@ import datetime
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
 from dotenv import dotenv_values
+from json import loads
 from .exceptions import *
 
 class RecNetLogin:
@@ -19,6 +20,7 @@ class RecNetLogin:
 
         Raises:
             CookieMissing: Raises when the cookie cannot be found from either a .env.secret file or your system variables.
+            InvalidFlareSolverInstance: Raises when the FlareSolver instance is cannot be found from either the specified .env file or your system variables.
         """
 
         # Prioritize local .env.secret files
@@ -38,15 +40,28 @@ class RecNetLogin:
                 cookie = os.getenv(key)
             else:
                 raise CookieMissing
+            
+        key = 'FLARESOLVERR_INSTANCE'
+        if key in env:
+            self.flaresolverr_instance = env[key]
+        else:
+            raise InvalidFlareSolverrInstance
 
         # Initialize attributes
-        self.client: httpx.Client = httpx.Client()
+        
+        #httpx doesn't like my LetsEncrypt ssl cert for some reason
+        if 'flaresolverr.apps.zigzatuzoo.xyz' in self.flaresolverr_instance.lower():
+            self.cient: httpx.Client = httpx.Client(verify=False)
+        else:
+            self.client: httpx.Client = httpx.Client()
+        self.acookies = {}
 
         # Get CSRF token
-        self.client.cookies["__Host-next-auth.csrf-token"] = self.get_csrf_token()
+        # As of 03/13/25 not required, if this breaks again first try to uncomment the next line
+        #self.acookies["__Host-next-auth.csrf-token"] = self.get_csrf_token()
         
         # Include session token
-        self.client.cookies["__Secure-next-auth.session-token"] = cookie
+        self.acookies["__Secure-next-auth.session-token"] = cookie
 
         # Fetch tokens
         self.__token: str = ""
@@ -60,10 +75,39 @@ class RecNetLogin:
             "Authorization": f"Bearer {self.__token}" 
         }
 
-    def get_csrf_token(self) -> str:
-        resp = self.client.get("https://rec.net/api/auth/csrf")
+
+    def get_flaresolverr(self, url, cookies: None|dict = None):
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "cmd": "request.get",
+            "url": url,
+            "maxTimeout": 5000
+            }
+
+        if cookies:
+            rcook = []
+            for key in cookies.keys():
+                rcook.append({"name": key, "value": cookies[key]})
+            data['cookies'] = rcook
+
+        resp = self.client.post(self.flaresolverr_instance,json=data,headers=headers)
+
         data = resp.json()
-        return data["csrfToken"]
+        
+        data = data['solution']['response']
+        start = data.find('{')
+        end = data.rfind('}')
+
+        info = data[start:end+1]
+        data = loads(info)
+        return data
+
+    def get_csrf_token(self) -> str:
+        
+        data = self.get_flaresolverr("https://rec.net/api/auth/csrf/")
+
+        rvar = data['csrfToken']
+        return rvar
 
     def get_decoded_token(self) -> Optional[dict]:
         """Returns a decoded bearer token
@@ -93,10 +137,8 @@ class RecNetLogin:
 
             # Get with cookie
             auth_url = "https://rec.net/api/auth/session"
-            resp = self.client.get(auth_url)
-
-            # Get response
-            data = resp.json()
+            
+            data = self.get_flaresolverr(auth_url,self.acookies)
 
             try:
                 self.__token = data["accessToken"]
